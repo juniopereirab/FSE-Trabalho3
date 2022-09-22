@@ -40,7 +40,9 @@ Com todo o ambiente propriamente configurado, é necessário executar alguns com
 `idf.py menuconfig` No menu Wifi Configuração
 
 - Para build e execução do projeto: 
+
 `idf.py build `
+
 `idf.py -p {PORT} flash monitor `
 
 Onde PORT é o dispositivo conectado ao computador.
