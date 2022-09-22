@@ -34,11 +34,10 @@ void DHT11(void *params) {
     while (xSemaphoreTake(conexaoMQTTSemaphore, portMAX_DELAY)) {
         while (true) {
             struct dht11_reading data = getInformation();
-
-            printf("temp: %d, hum: %d\n", data.temperature, data.humidity);
-            sendInformation("{\"temperature\": %d}", data.temperature, "v1/devices/me/telemetry");
-            sendInformation("{\"umidade\": %d}", data.humidity, "v1/devices/me/attributes");
-    
+            if (data.status == 0 || (data.temperature > 0 && data.humidity > 0)) {
+              sendInformation("{\"temperature\": %d}", data.temperature, "v1/devices/me/telemetry");
+              sendInformation("{\"umidade\": %d}", data.humidity, "v1/devices/me/attributes");
+            }
             vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
     }
@@ -80,10 +79,10 @@ void app_main(void)
 
     configureLED();
     pthread_create(&tid[0], NULL, (void *)mqttTask, (void *)NULL);
-    // pthread_create(&tid[1], NULL, (void *)dht11Task, (void *)NULL);
-    pthread_create(&tid[1], NULL, (void *)buzzerTask, (void *)NULL);
+    pthread_create(&tid[1], NULL, (void *)dht11Task, (void *)NULL);
+    // pthread_create(&tid[1], NULL, (void *)buzzerTask, (void *)NULL);
 
     pthread_join(tid[0], NULL);
-    // pthread_join(tid[1], NULL);
     pthread_join(tid[1], NULL);
+    // pthread_join(tid[1], NULL);
 }
