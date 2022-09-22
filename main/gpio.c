@@ -54,11 +54,42 @@ void ledPWM(double intensity) {
 }
 
 void playSound() {
-    while(1) {
-        gpio_set_level(BUZZER_GPIO, 1);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-        gpio_set_level(BUZZER_GPIO, 0);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+    // Configuração do Timer
+    ledc_timer_config_t timer_config = {
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .duty_resolution = LEDC_TIMER_16_BIT,
+        .timer_num = LEDC_TIMER_0,
+        .freq_hz = 1000,
+        .clk_cfg = LEDC_AUTO_CLK
+    };
+    ledc_timer_config(&timer_config);
+
+    // Configuração do Canal
+    ledc_channel_config_t channel_config = {
+        .gpio_num = BUZZER_GPIO,
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .channel = LEDC_CHANNEL_0,
+        .timer_sel = LEDC_TIMER_0,
+        .duty = 0,
+        .hpoint = 0
+    };
+    ledc_channel_config(&channel_config);
+
+    while(true)
+    {
+        for(int i = 0; i < 65535; i++)
+        {
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, i);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+        }
+
+        for(int i = 65535; i > 0; i--)
+        {
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, i);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+        }
     }
 }
 
