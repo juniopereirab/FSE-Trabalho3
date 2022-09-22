@@ -19,14 +19,25 @@
 #include "mqtt_client.h"
 
 #include "include/mqtt.h"
+#include "include/gpio.h"
+#include "include/cJSON.h"
 
 #define TAG "MQTT"
 
 extern SemaphoreHandle_t conexaoMQTTSemaphore;
 esp_mqtt_client_handle_t client;
 
-static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
-{
+void mqtt_recebe_mensagem(char * payload) {
+    cJSON *root = cJSON_Parse(payload);
+    char *method = cJSON_GetObjectItem(root, "method")->valuestring;
+
+    if (strcmp(method, "setIntensity") == 0) {
+        double intensity = cJSON_GetObjectItem(root, "params")->valuedouble;
+        ledPWM(intensity);
+    }
+}
+
+static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event) {
     esp_mqtt_client_handle_t client = event->client;
     int msg_id;
     
@@ -53,6 +64,8 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
             ESP_LOGI(TAG, "MQTT_EVENT_DATA");
             printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
             printf("DATA=%.*s\r\n", event->data_len, event->data);
+
+            mqtt_recebe_mensagem(event->data);
             break;
         case MQTT_EVENT_ERROR:
             ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
@@ -69,8 +82,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int ev
     mqtt_event_handler_cb(event_data);
 }
 
-void mqtt_start()
-{
+void mqtt_start() {
     esp_mqtt_client_config_t mqtt_config = {
         .broker.address.uri = "mqtt://164.41.98.25",
         .credentials.username = "cOLvke6n9vpK9NQPleP9",
@@ -80,8 +92,7 @@ void mqtt_start()
     esp_mqtt_client_start(client);
 }
 
-void mqtt_envia_mensagem(char * topico, char * mensagem)
-{
+void mqtt_envia_mensagem(char * topico, char * mensagem) {
     int message_id = esp_mqtt_client_publish(client, topico, mensagem, 0, 1, 0);
     ESP_LOGI(TAG, "Mensagem enviada, ID: %d", message_id);
 }

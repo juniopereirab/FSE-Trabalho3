@@ -29,6 +29,7 @@
 #include "freertos/task.h"
 
 #include "include/dht11.h"
+#include "sdkconfig.h"
 
 static gpio_num_t dht_gpio;
 static int64_t last_read_time = -2000000;
@@ -138,4 +139,16 @@ struct dht11_reading DHT11_read()
     {
         return last_read = _crcError();
     }
+}
+
+struct dht11_reading getInformation() {
+    DHT11_init(GPIO_NUM_4);
+
+    struct dht11_reading data_read = DHT11_read();
+
+    if (data_read.status != 0 || data_read.temperature <= 0) {
+        printf("Erro ao ler temperatura e umidade!\n");
+    }
+
+    return data_read;
 }

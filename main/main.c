@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
 #include "nvs_flash.h"
 #include "esp_wifi.h"
 #include "esp_event.h"
@@ -9,36 +10,57 @@
 #include <inttypes.h>
 #include "include/wifi.h"
 #include "include/mqtt.h"
+#include "include/dht11.h"
+#include "include/gpio.h"
 
 SemaphoreHandle_t conexaoWifiSemaphore;
 SemaphoreHandle_t conexaoMQTTSemaphore;
 
-void conectadoWifi(void * params)
-{
-  while(true)
-  {
-    if(xSemaphoreTake(conexaoWifiSemaphore, portMAX_DELAY))
-    {
-      // Processamento Internet
+void sendInformation(char* info ,int data, char* topic) {
+  char msg[200];
+  sprintf(msg, info, data);
+  mqtt_envia_mensagem(topic, msg);
+}
+
+void conectadoWifi(void * params) {
+  while(true) {
+    if(xSemaphoreTake(conexaoWifiSemaphore, portMAX_DELAY)) {
       mqtt_start();
     }
   }
 }
 
-void trataComunicacaoComServidor(void * params)
-{
-  char mensagem[50];
-  if(xSemaphoreTake(conexaoMQTTSemaphore, portMAX_DELAY))
-  {
-    while(true)
-    {
-       float temperatura = 20.0 + (float)rand()/(float)(RAND_MAX/10.0);
-       sprintf(mensagem, "temperatura1: %f", temperatura);
-       mqtt_envia_mensagem("sensores/temperatura", mensagem);
-       vTaskDelay(3000 / portTICK_PERIOD_MS);
+void DHT11(void *params) {
+    while (xSemaphoreTake(conexaoMQTTSemaphore, portMAX_DELAY)) {
+        while (true) {
+            struct dht11_reading data = getInformation();
+
+            printf("temp: %d, hum: %d\n", data.temperature, data.humidity);
+            sendInformation("{\"temperature\": %d}", data.temperature, "v1/devices/me/telemetry");
+            sendInformation("{\"umidade\": %d}", data.humidity, "v1/devices/me/attributes");
+    
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+        }
     }
-  }
 }
+
+void BUZZER(void *params) {
+  configureBuzzer();
+  playSound();
+}
+
+void mqttTask(void *params) {
+  xTaskCreate(&conectadoWifi, "Conexão ao MQTT", 4096, NULL, 1, NULL);
+}
+
+void dht11Task(void *params) {
+  xTaskCreate(&DHT11, "Coleta de temperatura e umidade", 4096, NULL, 1, NULL);
+}
+
+void buzzerTask(void *params) {
+  xTaskCreate(&BUZZER, "Acionamento buzzer", 4096, NULL, 1, NULL);
+}
+
 
 void app_main(void)
 {
@@ -54,6 +76,14 @@ void app_main(void)
     conexaoMQTTSemaphore = xSemaphoreCreateBinary();
     wifi_start();
 
-    xTaskCreate(&conectadoWifi,  "Conexão ao MQTT", 4096, NULL, 1, NULL);
-    xTaskCreate(&trataComunicacaoComServidor, "Comunicação com Broker", 4096, NULL, 1, NULL);
+    pthread_t tid[2];
+
+    configureLED();
+    pthread_create(&tid[0], NULL, (void *)mqttTask, (void *)NULL);
+    // pthread_create(&tid[1], NULL, (void *)dht11Task, (void *)NULL);
+    pthread_create(&tid[1], NULL, (void *)buzzerTask, (void *)NULL);
+
+    pthread_join(tid[0], NULL);
+    // pthread_join(tid[1], NULL);
+    pthread_join(tid[1], NULL);
 }
