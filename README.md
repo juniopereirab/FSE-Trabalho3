@@ -31,9 +31,21 @@ Ao total da implementação temos os seguintes componentes implementados:
 
 **Linguagens**: C<br>
 
-## Execução
+Para se obter o que é necessário primeiro deve-se instalar a  [ESP-IDF](https://github.com/espressif/esp-idf) para fazer a configuração da placa, seguindo a [documentação](https://idf.espressif.com)
 
-Após as instalações necessárias para rodar o projeto execute os seguintes comandos:
+Com todo o ambiente propriamente configurado, é necessário executar alguns comandos específicos:
+
+- Para configuração do Wifi: 
+
+`idf.py menuconfig` No menu Wifi Configuração
+
+- Para build e execução do projeto: 
+`idf.py build `
+`idf.py -p {PORT} flash monitor `
+
+Onde PORT é o dispositivo conectado ao computador.
+
+Alternativamente para a build e configuração do projeto utilizamos uma extensão do VSCode que automatiza esse processo chamada de [Expressif IDF](https://marketplace.visualstudio.com/items?itemName=espressif.esp-idf-extension)
 
 ## Uso
 
